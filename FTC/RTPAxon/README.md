@@ -1,44 +1,44 @@
 # RTPAxon - A Rotational Control for CRServo
-## These docs are a little out of date
-RTPAxon is a Java library designed for controlling a CRServo (Continuous Rotation Servo) using an analog encoder. This software provides precise control over servo rotation, supporting features like proportional control, configurable maximum power, and rotation tracking. It is optimized for use in FTC (FIRST Tech Challenge) robot systems.
+
+RTPAxon is a Java library for FTC robots that enables precise control of a Continuous Rotation Servo (CRServo) using an analog encoder. It provides PID-based run-to-position (RTP) control, direction management, and rotation tracking, making it easy to use a CRServo as a positional actuator.
 
 ## Features
 
-- **Proportional Control**: Uses a proportional controller to adjust servo power and move the servo to the target rotation.
-- **Encoder Feedback**: Tracks rotation using an encoder input, providing feedback on the servo's angle.
-- **Direction Control**: Easily configure the direction of the servo rotation (forward or reverse).
-- **Rotation Tracking**: Keeps track of total rotation and target rotation for precise control.
-- **Adjustable Parameters**: Fine-tune parameters like maximum power, proportional gain (kP), and target rotation.
+- **PID Control**: Uses a PID controller (with configurable kP, kI, kD) to move the servo to a target rotation.
+- **Encoder Feedback**: Tracks rotation using an analog encoder for accurate feedback.
+- **Direction Control**: Supports both forward and reverse directions.
+- **Rotation Tracking**: Maintains total and target rotation, including wraparound handling.
+- **Adjustable Parameters**: Easily tune max power, PID coefficients, and integral windup limits.
+- **Manual and RTP Modes**: Switch between direct power control and run-to-position mode.
+- **Telemetry/Logging**: Built-in logging for debugging and dashboard integration.
+- **TeleOp Test Mode**: Includes a TeleOp class for live tuning and testing.
 
+## Setup
 
-### Setup
+1. **Copy the Source File**  
+   Copy `RTPAxon.java` into your project's source code (e.g., `org.firstinspires.ftc.teamcode.subsystems`).
 
-1. Copy the `RTPAxon.java` file into your project's source code.
-2. Make sure that your Axon is in **CR Mode** using the Axon Programmer.
-3. Import the `RTPAxon` class into your FTC code.
+2. **Configure Your Axon**  
+   Ensure your Axon is set to **CR Mode** using the Axon Programmer.
 
-```java
-import org.firstinspires.ftc.teamcode.RTPAxon;
-```
+3. **Import the Class**
 
-3. Initialize the `RTPAxon` class with the appropriate CRServo and encoder input.
+   ```java
+   import org.firstinspires.ftc.teamcode.subsystems.RTPAxon;
+   ```
 
-```java
-CRServo servo = hardwareMap.get(CRServo.class, "servoName");
-AnalogInput encoder = hardwareMap.get(AnalogInput.class, "encoderName");
+4. **Initialize in Your OpMode**
 
-RTPAxon axon = new RTPAxon(servo, encoder);
-```
+   ```java
+   CRServo servo = hardwareMap.get(CRServo.class, "servoName");
+   AnalogInput encoder = hardwareMap.get(AnalogInput.class, "encoderName");
+   RTPAxon axon = new RTPAxon(servo, encoder);
+   ```
 
-4. Add the following to the loop in your opmode to update the position and power of the axon each loop.
-
-```java
-axon.update()
-```
+5. **Update in Your Loop**  
+   Call `axon.update();` at the start of each loop to update the servo's position and apply PID control.
 
 ## Example Usage
-
-Below is an example of how to use the `RTPAxon` class in an FTC tele-op or autonomous program:
 
 ```java
 public class MyOpMode extends OpMode {
@@ -48,18 +48,15 @@ public class MyOpMode extends OpMode {
     public void init() {
         CRServo servo = hardwareMap.get(CRServo.class, "servo");
         AnalogInput encoder = hardwareMap.get(AnalogInput.class, "encoder");
-
         axon = new RTPAxon(servo, encoder);
-        axon.setMaxPower(0.5);  // Set the maximum power limit to 50%
-        axon.setK(0.02);  // Set the proportional gain
+        axon.setMaxPower(0.5);  // Limit max power to 50%
+        axon.setPidCoeffs(0.02, 0.0005, 0.0025);  // Set PID coefficients
     }
 
     @Override
     public void loop() {
-        // Update the servo's position(this has to be done at the beginning of each loop)
-        axon.update();
+        axon.update(); // Must be called every loop
 
-        // Display the current status on the driver station
         telemetry.addData("Servo Position", axon.getCurrentAngle());
         telemetry.addData("Total Rotation", axon.getTotalRotation());
         telemetry.addData("Target Rotation", axon.getTargetRotation());
@@ -68,41 +65,72 @@ public class MyOpMode extends OpMode {
 }
 ```
 
-### Setting Target Rotation
+## Setting Target Rotation
 
-You can change the target rotation by calling `setTargetRotation()` or `changeTargetRotation()`:
+Set or increment the target rotation (in degrees):
 
 ```java
-// Set target rotation to 90 degrees
-axon.setTargetRotation(90);
-
-// Increment target rotation by 45 degrees
-axon.changeTargetRotation(45);
+axon.setTargetRotation(90);    // Move to 90 degrees absolute
+axon.changeTargetRotation(45); // Move 45 degrees from current position
 ```
 
-### Adjusting Power
+## Manual Power Control
 
-You can adjust the power using the `setPower()` method:
+You can directly set the servo power (bypassing PID) by disabling RTP mode:
 
 ```java
-axon.setPower(0.5);  // Set the servo to 50% power
+axon.setRtp(false);    // Disable run-to-position mode
+axon.setPower(0.5);    // Set servo to 50% power
 ```
 
-### Logging
+## PID Tuning
 
-For debugging or monitoring, you can log the current state of the servo using the `log()` method:
+Adjust PID coefficients for your mechanism:
 
 ```java
-String status = axon.log();
-telemetry.addData("Status", status);
+axon.setPidCoeffs(0.02, 0.0005, 0.0025); // kP, kI, kD
+axon.setMaxIntegralSum(50);              // Optional: limit integral windup
+```
+
+## Direction Control
+
+Reverse the servo direction if needed:
+
+```java
+axon.setDirection(RTPAxon.Direction.REVERSE);
+```
+
+## Logging and Telemetry
+
+For debugging, use the built-in log method:
+
+```java
+telemetry.addLine(axon.log());
 telemetry.update();
 ```
 
-## Configuration
+## TeleOp Test Mode
 
-You can configure several parameters to fine-tune the behavior of your servo:
+A ready-to-use TeleOp (`CRAxonTest`) is included for live tuning and testing.  
+It supports gamepad controls for changing target rotation and PID coefficients.
 
-- **Maximum Power (`setMaxPower(double maxPower)`)**: Set the maximum power that the servo can be driven at. Default is `0.25`.
-- **Proportional Gain (`setK(double k)`)**: Adjust the proportional gain for the control loop. Default is `0.015`.
-- **Direction (`setDirection(Direction direction)`)**: Set the direction of rotation. Choose between `Direction.FORWARD` and `Direction.REVERSE`.
-- **RTP Mode (`setRtp(boolean rtp)`)**: Enable or disable rotational tracking and proportional control.
+## Configuration Options
+
+- **setMaxPower(double maxPower)**: Set the maximum output power (default: 0.25).
+- **setPidCoeffs(double kP, double kI, double kD)**: Set PID coefficients.
+- **setMaxIntegralSum(double maxIntegralSum)**: Limit integral windup.
+- **setDirection(Direction direction)**: Set servo direction (FORWARD/REVERSE).
+- **setRtp(boolean rtp)**: Enable/disable run-to-position mode.
+- **setTargetRotation(double target)**: Set absolute target rotation (degrees).
+- **changeTargetRotation(double delta)**: Increment target rotation (degrees).
+- **setPower(double power)**: Directly set servo power (when RTP is off).
+
+## Notes
+
+- Always call `axon.update()` at the start of each loop for correct operation.
+- The encoder must be connected and mapped correctly in your hardware configuration.
+- For best results, tune PID coefficients for your specific mechanism.
+
+---
+
+For questions or improvements, open an issue or PR!
